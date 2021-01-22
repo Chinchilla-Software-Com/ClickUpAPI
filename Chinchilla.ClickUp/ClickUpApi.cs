@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Chinchilla.ClickUp.Helpers;
 using Chinchilla.ClickUp.Params;
@@ -335,10 +338,9 @@ namespace Chinchilla.ClickUp
 		}
 
 		/// <summary>
-		/// Get Tasks of the Team and filter its by optionalParams
+		/// Get Tasks of the Team
 		/// </summary>
-		/// <param name="paramsGetTasks">params obkect of get tasks request</param>
-		/// <param name="optionalParams">OptionalParamsGetTask object</param>
+		/// <param name="paramsGetTasks">params object of get tasks request</param>
 		/// <returns>ResponseGeneric with ResponseTasks response object</returns>
 		public ResponseGeneric<ResponseTasks, ResponseError> GetTasks(ParamsGetTasks paramsGetTasks)
 		{
@@ -350,6 +352,71 @@ namespace Chinchilla.ClickUp
 			ResponseGeneric<ResponseTasks, ResponseError> result = RestSharperHelper.ExecuteRequest<ResponseTasks, ResponseError>(client, request);
 			return result;
 		}
+
+        /// <summary>
+        /// Get Tasks of the Team and filter its by optionalParams
+        /// </summary>
+        /// <param name="paramsGetTasks">params object of get tasks request</param>
+        /// <param name="optionalParams">NameValueCollection object</param>
+        /// <returns>ResponseGeneric with ResponseTasks response object</returns>
+        public ResponseGeneric<ResponseTasks, ResponseError> GetTasks(ParamsGetTasks paramsGetTasks, NameValueCollection optionalParams)
+        {
+            var client = new RestClient(_baseAddress);
+            var request = new RestRequest($"team/{paramsGetTasks.TeamId}/task{optionalParams.ToQueryString()}", Method.GET);
+            request.AddHeader("authorization", AccessToken);
+
+            // execute the request
+            return RestSharperHelper.ExecuteRequest<ResponseTasks, ResponseError>(client, request);
+        }
+
+		/// <summary>
+		/// Get SubTasks of the Team
+		/// </summary>
+		/// <param name="paramsGetTasks">params object of get tasks request</param>
+        /// <returns>ResponseGeneric with ResponseTasks response object</returns>
+		public ResponseGeneric<ResponseTasks, ResponseError> GetSubTasks(ParamsGetTasks paramsGetTasks)
+        {
+           var parameters = System.Web.HttpUtility.ParseQueryString(string.Empty);
+		   parameters.Add("subtasks",string.Empty);
+           return GetTasks(paramsGetTasks, parameters);
+        }
+
+        /// <summary>
+        /// Get closed Tasks of the Team
+        /// </summary>
+        /// <param name="paramsGetTasks">params object of get tasks request</param>
+        /// <returns>ResponseGeneric with ResponseTasks response object</returns>
+        public ResponseGeneric<ResponseTasks, ResponseError> GetClosedTasks(ParamsGetTasks paramsGetTasks)
+        {
+            var parameters = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            parameters.Add("include_closed", string.Empty);
+            return GetTasks(paramsGetTasks, parameters);
+        }
+
+		/// <summary>
+		/// Get SubTasks of parent by parentId
+		/// </summary>
+		/// <param name="paramsGetTasks">params object of get tasks request</param>
+		/// <param name="paramsParentId"></param>
+		/// <returns>ResponseGeneric with ResponseTasks response object</returns>
+		public ResponseGeneric<ResponseTasks, ResponseError> GetSubTasksOfParent(ParamsGetTasks paramsGetTasks, ParamsGetTaskById paramsParentId)
+        {
+            var subTasksResponse = GetSubTasks(paramsGetTasks);
+            if (subTasksResponse.RequestStatus != HttpStatusCode.OK)
+                return subTasksResponse;
+
+            var filtered = subTasksResponse.ResponseSuccess.Tasks.Where(subtask => subtask.Parent == paramsParentId.TaskId).ToList();
+
+			//TODO: if filtered is null response can be type of error, like no content. 
+            var response = new ResponseGeneric<ResponseTasks, ResponseError>
+            {
+				ResponseSuccess = new ResponseTasks {Tasks = filtered},
+				RequestStatus = HttpStatusCode.OK,
+				ResponseError = null,
+            };
+			
+            return response;
+        }
 
 		/// <summary>
 		/// Create Task in List.
@@ -655,11 +722,10 @@ namespace Chinchilla.ClickUp
 		}
 
 		/// <summary>
-		/// Get Tasks of the Team and filter its by optionalParams
+		/// Get Tasks of the Team
 		/// </summary>
 		/// <param name="paramsGetTasks">param object of get tasks request</param>
-		/// <param name="optionalParams">OptionalParamsGetTask object</param>
-		/// <returns>ResponseGeneric with ResponseTasks object expected</returns>
+        /// <returns>ResponseGeneric with ResponseTasks object expected</returns>
 		public Task<ResponseGeneric<ResponseTasks, ResponseError>> GetTasksAsync(ParamsGetTasks paramsGetTasks)
 		{
 			var client = new RestClient(_baseAddress);
@@ -668,6 +734,71 @@ namespace Chinchilla.ClickUp
 
 			// execute the request
 			return RestSharperHelper.ExecuteRequestAsync<ResponseTasks, ResponseError>(client, request);
+		}
+
+		/// <summary>
+		/// Get Tasks of the Team and filter its by optionalParams
+		/// </summary>
+		/// <param name="paramsGetTasks">params object of get tasks request</param>
+		/// <param name="optionalParams">NameValueCollection object</param>
+		/// <returns>ResponseGeneric with ResponseTasks response object</returns>
+		public Task<ResponseGeneric<ResponseTasks, ResponseError>> GetTasksAsync(ParamsGetTasks paramsGetTasks, NameValueCollection optionalParams)
+		{
+			var client = new RestClient(_baseAddress);
+			var request = new RestRequest($"team/{paramsGetTasks.TeamId}/task{optionalParams.ToQueryString()}", Method.GET);
+			request.AddHeader("authorization", AccessToken);
+
+			// execute the request
+			return RestSharperHelper.ExecuteRequestAsync<ResponseTasks, ResponseError>(client, request);
+        }
+
+		/// <summary>
+		/// Get SubTasks of the Team
+		/// </summary>
+		/// <param name="paramsGetTasks">params object of get tasks request</param>
+		/// <returns>ResponseGeneric with ResponseTasks response object</returns>
+		public Task<ResponseGeneric<ResponseTasks, ResponseError>> GetSubTasksAsync(ParamsGetTasks paramsGetTasks)
+		{
+			var parameters = System.Web.HttpUtility.ParseQueryString(string.Empty);
+			parameters.Add("subtasks", string.Empty);
+			return GetTasksAsync(paramsGetTasks, parameters);
+		}
+
+		/// <summary>
+		/// Get closed Tasks of the Team
+		/// </summary>
+		/// <param name="paramsGetTasks">params object of get tasks request</param>
+		/// <returns>ResponseGeneric with ResponseTasks response object</returns>
+		public Task<ResponseGeneric<ResponseTasks, ResponseError>> GetClosedTasksAsync(ParamsGetTasks paramsGetTasks)
+		{
+			var parameters = System.Web.HttpUtility.ParseQueryString(string.Empty);
+			parameters.Add("include_closed", string.Empty);
+			return GetTasksAsync(paramsGetTasks, parameters);
+		}
+
+		/// <summary>
+		/// Get SubTasks of parent by parentId
+		/// </summary>
+		/// <param name="paramsGetTasks">params object of get tasks request</param>
+		/// <param name="paramsParentId"></param>
+		/// <returns>ResponseGeneric with ResponseTasks response object</returns>
+		public async Task<ResponseGeneric<ResponseTasks, ResponseError>> GetSubTasksOfParentAsync(ParamsGetTasks paramsGetTasks, ParamsGetTaskById paramsParentId)
+		{
+			var subTasksResponse = await GetSubTasksAsync(paramsGetTasks).ConfigureAwait(false);
+			if (subTasksResponse.RequestStatus != HttpStatusCode.OK)
+				return subTasksResponse;
+
+			var filtered = subTasksResponse.ResponseSuccess.Tasks.Where(subtask => subtask.Parent == paramsParentId.TaskId).ToList();
+
+			//TODO: if filtered is null response can be type of error, like no content. 
+			var response = new ResponseGeneric<ResponseTasks, ResponseError>
+			{
+				ResponseSuccess = new ResponseTasks { Tasks = filtered },
+				RequestStatus = HttpStatusCode.OK,
+				ResponseError = null,
+			};
+
+			return response;
 		}
 
 		/// <summary>
